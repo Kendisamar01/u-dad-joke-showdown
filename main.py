@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-JOKE = "I started writing a book about two socks. It has a hole in the plot."
+JOKE = "I asked my dentist for a cake recipe. He said the secret is plenty of fillings."
 
 
 def main() -> None:
