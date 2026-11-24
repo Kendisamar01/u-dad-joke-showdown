@@ -1,35 +1,38 @@
+"""Verify main.py produces an exact, unpadded copy of entry.txt."""
+
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
-OUTPUT_DIR = Path("/tmp/dadjout")
+ROOT = Path(__file__).resolve().parent
 
 
-def main() -> None:
-    env = dict(os.environ)
-    env["MAKEFUN_OUTPUT_DIR"] = str(OUTPUT_DIR)
+def check():
+    expected = (ROOT / "entry.txt").read_text(encoding="utf-8").strip()
+    assert 1 <= len(expected) <= 200
+    assert "\n" not in expected and "\r" not in expected
 
-    subprocess.run(
-        [sys.executable, "main.py"],
-        cwd=Path(__file__).resolve().parent,
-        env=env,
-        check=True,
-    )
+    with tempfile.TemporaryDirectory() as tmp:
+        env = dict(os.environ)
+        env["MAKEFUN_OUTPUT_DIR"] = tmp
+        completed = subprocess.run(
+            [sys.executable, str(ROOT / "main.py")],
+            cwd=str(ROOT),
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        assert completed.returncode == 0, completed.stderr.decode("utf-8", "replace")
+        produced = (Path(tmp) / "entry.txt").read_text(encoding="utf-8")
 
-    entry_file = OUTPUT_DIR / "entry.txt"
-    assert entry_file.is_file(), "entry.txt was not written"
-
-    text = entry_file.read_text(encoding="utf-8")
-    assert 1 <= len(text) <= 200, "entry must be 1 to 200 characters"
-    assert text.strip(), "entry must not be only white space"
-
-    lines = text.splitlines()
-    assert len(lines) == 1, "entry must be a single line"
-    assert text == lines[0], "entry must not contain line breaks or padding"
-
-    print("PASS")
+    assert "\n" not in produced and "\r" not in produced
+    assert produced == produced.strip()
+    assert 1 <= len(produced) <= 200
+    assert produced == expected
 
 
 if __name__ == "__main__":
-    main()
+    check()
+    print("PASS")
